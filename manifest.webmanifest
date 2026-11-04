@@ -1,0 +1,10 @@
+{
+  "name": "SchoolIdentity",
+  "short_name": "SchoolIdentity",
+  "description": "L'école connectée aux familles.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#102b46",
+  "icons": []
+}
