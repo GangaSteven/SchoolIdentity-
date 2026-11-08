@@ -1,4 +1,5 @@
-document.getElementById("year")?.textContent = new Date().getFullYear();
+const yearElement = document.getElementById("year");
+if (yearElement) yearElement.textContent = new Date().getFullYear();
 
 const menuButton = document.getElementById("menuButton");
 const topbar = document.querySelector(".topbar");
