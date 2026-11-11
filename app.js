@@ -19,7 +19,7 @@ document.querySelectorAll("#mainNav a").forEach(link => {
   const SUPABASE_URL = "https://fcdbmrzmgcvwhhbgavxb.supabase.co";
 
   // Remplacer par la clé Publishable déjà utilisée dans l'ancien app.js
-  const SUPABASE_PUBLISHABLE_KEY = "REMPLACER_PAR_VOTRE_CLE_PUBLISHABLE";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-03TQGVhIKrus5ZwsTEbCw_IJ_CmsCN";
 
   const status = document.getElementById("authStatus");
   const signupForm = document.getElementById("signupForm");
