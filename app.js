@@ -17,7 +17,7 @@ document.querySelectorAll("#mainNav a").forEach(link => {
 // Connexion Supabase
 (async () => {
   const SUPABASE_URL = "https://fcdbmrzmgcvwhhbgavxb.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "COLLER_ICI_LA_CLE_PUBLISHABLE";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-03TQGVhIKrus5ZwsTEbCw_IJ_CmsCN";
 
   const status = document.createElement("p");
   status.id = "supabaseStatus";
