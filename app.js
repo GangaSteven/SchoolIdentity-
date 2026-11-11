@@ -1,3 +1,4 @@
+
 const yearElement = document.getElementById("year");
 if (yearElement) yearElement.textContent = new Date().getFullYear();
 
@@ -14,20 +15,26 @@ document.querySelectorAll("#mainNav a").forEach(link => {
   });
 });
 
-// Connexion Supabase
 (async () => {
   const SUPABASE_URL = "https://fcdbmrzmgcvwhhbgavxb.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-03TQGVhIKrus5ZwsTEbCw_IJ_CmsCN";
 
-  const status = document.createElement("p");
-  status.id = "supabaseStatus";
-  status.textContent = "Vérification de la connexion...";
-  document.body.appendChild(status);
+  // Remplacer par la clé Publishable déjà utilisée dans l'ancien app.js
+  const SUPABASE_PUBLISHABLE_KEY = "REMPLACER_PAR_VOTRE_CLE_PUBLISHABLE";
+
+  const status = document.getElementById("authStatus");
+  const signupForm = document.getElementById("signupForm");
+  const loginForm = document.getElementById("loginForm");
+  const accountPanel = document.getElementById("accountPanel");
+  const accountEmail = document.getElementById("accountEmail");
+  const logoutButton = document.getElementById("logoutButton");
+
+  function showMessage(message) {
+    if (status) status.textContent = message;
+  }
 
   try {
-    if (SUPABASE_PUBLISHABLE_KEY === "COLLER_ICI_LA_CLE_PUBLISHABLE") {
-      status.textContent = "La clé publique Supabase doit encore être configurée.";
-      return;
+    if (SUPABASE_PUBLISHABLE_KEY.startsWith("REMPLACER_")) {
+      throw new Error("Clé publique non configurée.");
     }
 
     const { createClient } = await import(
@@ -41,22 +48,108 @@ document.querySelectorAll("#mainNav a").forEach(link => {
 
     window.schoolIdentitySupabase = supabase;
 
-    const { error } = await supabase.auth.getSession();
+    async function updateInterface() {
+      const { data, error } = await supabase.auth.getSession();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    status.textContent = "Connexion Supabase établie.";
-    console.log("SchoolIdentity : connexion Supabase réussie.");
+      const session = data.session;
+
+      if (session) {
+        accountEmail.textContent = session.user.email;
+        accountPanel.hidden = false;
+        signupForm.hidden = true;
+        loginForm.hidden = true;
+        showMessage("Vous êtes connecté à SchoolIdentity.");
+      } else {
+        accountPanel.hidden = true;
+        signupForm.hidden = false;
+        loginForm.hidden = false;
+        showMessage("Vous pouvez créer un compte ou vous connecter.");
+      }
+    }
+
+    signupForm.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const fullName = document.getElementById("signupName").value.trim();
+      const phone = document.getElementById("signupPhone").value.trim();
+      const email = document.getElementById("signupEmail").value.trim();
+      const password = document.getElementById("signupPassword").value;
+
+      showMessage("Création du compte en cours...");
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone: phone
+          }
+        }
+      });
+
+      if (error) {
+        showMessage("Erreur d'inscription : " + error.message);
+        return;
+      }
+
+      if (data.session) {
+        showMessage("Compte créé et connexion établie.");
+      } else {
+        showMessage(
+          "Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse."
+        );
+      }
+
+      await updateInterface();
+    });
+
+    loginForm.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      showMessage("Connexion en cours...");
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        showMessage("Erreur de connexion : " + error.message);
+        return;
+      }
+
+      await updateInterface();
+    });
+
+    logoutButton.addEventListener("click", async () => {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        showMessage("Erreur de déconnexion.");
+        return;
+      }
+
+      showMessage("Vous êtes déconnecté.");
+      await updateInterface();
+    });
+
+    supabase.auth.onAuthStateChange(() => {
+      updateInterface().catch(error => {
+        console.error(error);
+        showMessage("Impossible de vérifier la session.");
+      });
+    });
+
+    await updateInterface();
 
   } catch (error) {
-    status.textContent = "Connexion Supabase impossible. Vérifiez la configuration.";
-    console.error("Erreur Supabase :", error);
+    console.error("SchoolIdentity :", error);
+    showMessage("Configuration impossible : vérifiez la connexion Supabase et la clé publique.");
   }
 })();
-
-// Le formulaire reste en démonstration pour le moment.
-document.getElementById("demoForm")?.addEventListener("submit", event => {
-  event.preventDefault();
-  document.getElementById("formMessage").textContent =
-    "Le formulaire réel sera activé après la configuration des comptes et de la base de données.";
-});
