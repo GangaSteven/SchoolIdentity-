@@ -1,155 +1,129 @@
 
-const yearElement = document.getElementById("year");
-if (yearElement) yearElement.textContent = new Date().getFullYear();
 
-const menuButton = document.getElementById("menuButton");
-const topbar = document.querySelector(".topbar");
+// ==========================================
+// SchoolIdentity — Connexion Supabase
+// ==========================================
 
-menuButton?.addEventListener("click", () => {
-  topbar?.classList.toggle("nav-open");
-});
+const SUPABASE_URL = "https://fcdbmrzmgcvwhhbgavxb.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-03TQGVhIKrus5ZwsTEbCw_IJ_CmsCN";
 
-document.querySelectorAll("#mainNav a").forEach(link => {
-  link.addEventListener("click", () => {
-    topbar?.classList.remove("nav-open");
-  });
-});
+// Vérification de la configuration
+if (
+  !window.supabase ||
+  SUPABASE_PUBLISHABLE_KEY === "COLLE_ICI_TA_PUBLISHABLE_KEY"
+) {
+  console.error("Configuration Supabase incomplète.");
+} else {
+  const client = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
 
-(async () => {
-  const SUPABASE_URL = "https://fcdbmrzmgcvwhhbgavxb.supabase.co";
+  // Menu mobile
+  const menuButton = document.getElementById("menuButton");
+  const topbar = document.querySelector(".topbar");
 
-  // Remplacer par la clé Publishable déjà utilisée dans l'ancien app.js
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-03TQGVhIKrus5ZwsTEbCw_IJ_CmsCN";
+  if (menuButton && topbar) {
+    menuButton.addEventListener("click", () => {
+      topbar.classList.toggle("nav-open");
+    });
 
-  const status = document.getElementById("authStatus");
-  const signupForm = document.getElementById("signupForm");
-  const loginForm = document.getElementById("loginForm");
-  const accountPanel = document.getElementById("accountPanel");
-  const accountEmail = document.getElementById("accountEmail");
-  const logoutButton = document.getElementById("logoutButton");
-
-  function showMessage(message) {
-    if (status) status.textContent = message;
+    document.querySelectorAll("#mainNav a").forEach(link => {
+      link.addEventListener("click", () => {
+        topbar.classList.remove("nav-open");
+      });
+    });
   }
 
-  try {
-    if (SUPABASE_PUBLISHABLE_KEY.startsWith("REMPLACER_")) {
-      throw new Error("Clé publique non configurée.");
+  // Année du pied de page
+  const year = document.getElementById("year");
+  if (year) year.textContent = new Date().getFullYear();
+
+  // Formulaire de connexion
+  const form = document.getElementById("demoForm");
+  const emailInput = document.getElementById("email");
+  const message = document.getElementById("formMessage");
+  const submitButton = form?.querySelector('button[type="submit"]');
+
+  // Le rôle ne doit pas être choisi par l'utilisateur.
+  const roleSelect = document.getElementById("role");
+  if (roleSelect) {
+    roleSelect.hidden = true;
+    if (roleSelect.previousElementSibling) {
+      roleSelect.previousElementSibling.hidden = true;
     }
+  }
 
-    const { createClient } = await import(
-      "https://esm.sh/@supabase/supabase-js@2"
-    );
+  if (form && emailInput && message) {
+    message.textContent =
+      "Entrez votre adresse e-mail. Nous vous enverrons un lien sécurisé de connexion.";
 
-    const supabase = createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY
-    );
-
-    window.schoolIdentitySupabase = supabase;
-
-    async function updateInterface() {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) throw error;
-
-      const session = data.session;
-
-      if (session) {
-        accountEmail.textContent = session.user.email;
-        accountPanel.hidden = false;
-        signupForm.hidden = true;
-        loginForm.hidden = true;
-        showMessage("Vous êtes connecté à SchoolIdentity.");
-      } else {
-        accountPanel.hidden = true;
-        signupForm.hidden = false;
-        loginForm.hidden = false;
-        showMessage("Vous pouvez créer un compte ou vous connecter.");
-      }
-    }
-
-    signupForm.addEventListener("submit", async event => {
+    form.addEventListener("submit", async event => {
       event.preventDefault();
 
-      const fullName = document.getElementById("signupName").value.trim();
-      const phone = document.getElementById("signupPhone").value.trim();
-      const email = document.getElementById("signupEmail").value.trim();
-      const password = document.getElementById("signupPassword").value;
+      const email = emailInput.value.trim();
 
-      showMessage("Création du compte en cours...");
+      if (!email) {
+        message.textContent = "Veuillez saisir votre adresse e-mail.";
+        return;
+      }
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone: phone
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Envoi en cours...";
+      }
+
+      message.textContent = "Connexion en cours...";
+
+      try {
+        const { error } = await client.auth.signInWithOtp({
+          email,
+          options: {
+            shouldCreateUser: false,
+            emailRedirectTo: window.location.href.split("#")[0]
           }
+        });
+
+        if (error) throw error;
+
+        message.textContent =
+          "Un lien de connexion vient d'être envoyé à votre adresse e-mail. Consultez votre boîte de réception.";
+      } catch (error) {
+        console.error("Erreur de connexion :", error);
+        message.textContent =
+          "Impossible d'envoyer le lien : " + error.message;
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Envoyer le lien de connexion";
         }
-      });
-
-      if (error) {
-        showMessage("Erreur d'inscription : " + error.message);
-        return;
       }
-
-      if (data.session) {
-        showMessage("Compte créé et connexion établie.");
-      } else {
-        showMessage(
-          "Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse."
-        );
-      }
-
-      await updateInterface();
     });
-
-    loginForm.addEventListener("submit", async event => {
-      event.preventDefault();
-
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
-
-      showMessage("Connexion en cours...");
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        showMessage("Erreur de connexion : " + error.message);
-        return;
-      }
-
-      await updateInterface();
-    });
-
-    logoutButton.addEventListener("click", async () => {
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        showMessage("Erreur de déconnexion.");
-        return;
-      }
-
-      showMessage("Vous êtes déconnecté.");
-      await updateInterface();
-    });
-
-    supabase.auth.onAuthStateChange(() => {
-      updateInterface().catch(error => {
-        console.error(error);
-        showMessage("Impossible de vérifier la session.");
-      });
-    });
-
-    await updateInterface();
-
-  } catch (error) {
-    console.error("SchoolIdentity :", error);
-    showMessage("Configuration impossible : vérifiez la connexion Supabase et la clé publique.");
   }
-})();
+
+  // Gestion de la session
+  async function updateSession() {
+    const { data, error } = await client.auth.getSession();
+
+    if (error) {
+      console.error("Erreur de session :", error);
+      return;
+    }
+
+    if (data.session && message) {
+      message.textContent =
+        "Vous êtes connecté à SchoolIdentity : " +
+        data.session.user.email;
+    }
+  }
+
+  client.auth.onAuthStateChange((event, session) => {
+    if (message && session) {
+      message.textContent =
+        "Vous êtes connecté à SchoolIdentity : " +
+        session.user.email;
+    }
+  });
+
+  updateSession();
+}
